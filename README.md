@@ -207,6 +207,23 @@ Expected response:
 ```json
 {"status":"ok"}
 ```
+### Phase 1 Verification
+
+The Node.js web application was validated locally before containerisation.
+
+The following endpoints were tested:
+
+```bash
+curl http://localhost:8080/health
+curl http://localhost:8080/login
+
+curl -i \
+  -X POST \
+  http://localhost:8080/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"password"}'
+
+![Phase 1 Local Application Verification](docs/images/phase-1-local-verification.png)
 
 ---
 
