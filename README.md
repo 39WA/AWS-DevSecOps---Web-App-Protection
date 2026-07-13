@@ -266,6 +266,30 @@ Expected response:
 {"status":"ok"}
 ```
 
+## Phase 2 – Secure Containerisation
+
+The application was containerised using Docker to provide a consistent and secure runtime environment.
+
+### Objectives
+
+- Create a lightweight Docker image
+- Install production dependencies only
+- Run the application as a non-root user
+- Expose the application on port `8080`
+- Validate the containerised application locally
+- Verify the `/health` and `/login` endpoints
+
+### Secure Docker Configuration
+
+The application uses the lightweight `node:22-alpine` base image.
+
+Production dependencies are installed using:
+
+```bash
+npm ci --omit=dev
+
+![Phase 2 Secure Containerisation](docs/images/phase-2-secure-container-verification.png)
+
 ---
 
 # Phase 3 - AWS ClickOps Deployment
