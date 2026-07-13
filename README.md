@@ -1,5 +1,4 @@
 # AWSDevSecOps - Web App Protection
-# AWS DevSecOps - Web App Protection
 
 ![AWS DevSecOps Web App Protection](docs/images/project-banner.png)
 
