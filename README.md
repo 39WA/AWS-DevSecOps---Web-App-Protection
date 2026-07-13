@@ -419,7 +419,7 @@ The following screenshot demonstrates:
 
 ---
 
-## Phase 2 Security Outcome
+## Phase 2 Security Outcome 
 
 Phase 2 established a secure containerised runtime for the web application.
 
