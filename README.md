@@ -177,8 +177,269 @@ The application is built with Node.js and Express and exposes health and login e
 
 ### Health Endpoint
 
+The following screenshot demonstrates successful local application verification, including the health endpoint, login endpoint, and invalid login security test.
+
+![Phase 1 Local Application Verification](docs/images/phase-1-local-verification.png)
+
+
+---
+
+# Phase 2 - Secure Containerisation
+
+## Overview
+
+Phase 2 packages the Node.js web application into a Docker container and applies container security controls.
+
+The objective is to create a lightweight and reproducible application runtime while ensuring the application does not execute as the root user.
+
+---
+
+## Container Security Objectives
+
+The following container security controls were implemented:
+
+- Lightweight Node.js Alpine base image.
+- Production dependencies only.
+- Deterministic dependency installation using `npm ci`.
+- Non-root container execution.
+- Explicit application port configuration.
+- Reduced Docker build context using `.dockerignore`.
+- Environment files excluded from the container build context.
+- Terraform state files excluded from the container build context.
+
+---
+
+## Dockerfile
+
+The application uses the following Docker configuration:
+
+```dockerfile
+FROM node:22-alpine
+
+WORKDIR /app
+
+COPY app/package*.json ./
+
+RUN npm ci --omit=dev
+
+COPY app/src ./src
+
+ENV NODE_ENV=production
+ENV PORT=8080
+
+USER node
+
+EXPOSE 8080
+
+CMD ["node", "src/server.js"]
+```
+
+The `node:22-alpine` image provides a lightweight Node.js runtime.
+
+Production dependencies are installed using:
+
+```bash
+npm ci --omit=dev
+```
+
+The container runs using the built-in non-root `node` user:
+
+```dockerfile
+USER node
+```
+
+Running the application as a non-root user reduces the impact of a potential container compromise.
+
+---
+
+## Docker Ignore Configuration
+
+A `.dockerignore` file reduces unnecessary files included in the Docker build context.
+
 ```text
-GET /health
+.git
+.github
+.vscode
+node_modules
+app/node_modules
+npm-debug.log
+.env
+.DS_Store
+docs
+infra
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+```
+
+This prevents local dependencies, Git metadata, environment files, documentation, and Terraform state files from being copied into the Docker build context.
+
+---
+
+## Build the Docker Image
+
+The Docker image was built from the repository root:
+
+```bash
+docker build -t aws-devsecops-webapp:phase2 .
+```
+
+Verify the image:
+
+```bash
+docker images aws-devsecops-webapp
+```
+
+Expected image:
+
+```text
+aws-devsecops-webapp   phase2
+```
+
+---
+
+## Non-Root Container Verification
+
+The configured container user was inspected using:
+
+```bash
+docker image inspect aws-devsecops-webapp:phase2 \
+  --format 'Container user: {{.Config.User}}'
+```
+
+Expected result:
+
+```text
+Container user: node
+```
+
+This confirms that the container is configured to run using the non-root `node` user.
+
+---
+
+## Run the Container
+
+The application container was started using:
+
+```bash
+docker run -d \
+  --name aws-devsecops-webapp \
+  -p 8080:8080 \
+  aws-devsecops-webapp:phase2
+```
+
+Verify the running container:
+
+```bash
+docker ps
+```
+
+Check the application logs:
+
+```bash
+docker logs aws-devsecops-webapp
+```
+
+Expected output:
+
+```text
+Web application listening on port 8080
+```
+
+---
+
+## Verify the Runtime User
+
+The runtime container user was verified using:
+
+```bash
+docker exec aws-devsecops-webapp whoami
+```
+
+Expected result:
+
+```text
+node
+```
+
+This confirms that the application process is not running as the root user.
+
+---
+
+## Container Application Verification
+
+The containerised application endpoints were tested locally.
+
+### Health Endpoint
+
+```bash
+curl http://localhost:8080/health
+```
+
+Expected response:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+### Login Endpoint
+
+```bash
+curl http://localhost:8080/login
+```
+
+Expected response:
+
+```json
+{
+  "message": "Login endpoint",
+  "method": "POST",
+  "requiredFields": [
+    "username",
+    "password"
+  ]
+}
+```
+
+---
+
+## Phase 2 Evidence
+
+The following screenshot demonstrates:
+
+- Docker container running successfully.
+- Application image `aws-devsecops-webapp:phase2`.
+- Container runtime user verified as `node`.
+- `/health` endpoint returning `{"status":"ok"}`.
+- `/login` endpoint returning the expected application response.
+
+![Phase 2 Secure Container Verification](docs/images/phase-2-secure-container-verification.png)
+
+---
+
+## Phase 2 Security Outcome
+
+Phase 2 established a secure containerised runtime for the web application.
+
+The application now:
+
+- Runs inside a lightweight Node.js Alpine container.
+- Installs production dependencies only.
+- Uses deterministic dependency installation.
+- Runs as a non-root user.
+- Excludes unnecessary and sensitive local files from the Docker build context.
+- Successfully exposes the `/health` and `/login` endpoints from the container.
+
+The container is now ready for deployment behind an AWS Application Load Balancer using ECS Fargate in Phase 3.
+
+---
+
+The following screenshot demonstrates the Docker container running successfully as the non-root `node` user and verifies the application health and login endpoints.
+
+![Phase 2 Secure Container Verification](docs/images/phase-2-secure-container-verification.png)
+
 ---
 
 # Phase 3 - AWS ClickOps Deployment
