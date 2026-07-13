@@ -167,129 +167,18 @@ aws-devsecops-webapp-protection/
 
 # Phase 1 - Application Setup
 
-Build a lightweight web application using Node.js, Go, or Python.
+## Overview
 
-The application exposes two endpoints.
+Phase 1 establishes the local Node.js web application that will be protected and deployed throughout this AWS DevSecOps project.
 
-## Health Endpoint
+The application is built with Node.js and Express and exposes health and login endpoints for security testing.
+
+## Application Endpoints
+
+### Health Endpoint
 
 ```text
 GET /health
-```
-
-Expected response:
-
-```json
-{
-  "status": "ok"
-}
-```
-
-## Login Endpoint
-
-```text
-GET /login
-POST /login
-```
-
-The login endpoint is intentionally simple and acts as a security testing target.
-
-No real authentication credentials should be stored or processed.
-
-## Local Verification
-
-```bash
-curl http://localhost:8080/health
-```
-
-Expected response:
-
-```json
-{"status":"ok"}
-```
-### Phase 1 Verification
-
-The Node.js web application was validated locally before containerisation.
-
-The following endpoints were tested:
-
-```bash
-curl http://localhost:8080/health
-curl http://localhost:8080/login
-
-curl -i \
-  -X POST \
-  http://localhost:8080/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"password"}'
-
-![Phase 1 Local Application Verification](docs/images/phase-1-local-verification.png)
-
----
-
-# Phase 2 - Secure Containerisation
-
-The application is packaged as a Docker container.
-
-## Container Security Requirements
-
-- Multi-stage Docker build.
-- Minimal runtime image.
-- Distroless runtime where possible.
-- Non-root container user.
-- No build tools in the runtime image.
-- Docker health check.
-- Explicit application port.
-- Dependency installation using lock files.
-
-## Build the Container
-
-```bash
-docker build -t webapp .
-```
-
-## Run the Container
-
-```bash
-docker run --rm -p 8080:80 webapp
-```
-
-## Verify the Application
-
-```bash
-curl localhost:8080/health
-```
-
-Expected response:
-
-```json
-{"status":"ok"}
-```
-
-## Phase 2 – Secure Containerisation
-
-The application was containerised using Docker to provide a consistent and secure runtime environment.
-
-### Objectives
-
-- Create a lightweight Docker image
-- Install production dependencies only
-- Run the application as a non-root user
-- Expose the application on port `8080`
-- Validate the containerised application locally
-- Verify the `/health` and `/login` endpoints
-
-### Secure Docker Configuration
-
-The application uses the lightweight `node:22-alpine` base image.
-
-Production dependencies are installed using:
-
-```bash
-npm ci --omit=dev
-
-![Phase 2 Secure Containerisation](docs/images/phase-2-secure-container-verification.png)
-
 ---
 
 # Phase 3 - AWS ClickOps Deployment
