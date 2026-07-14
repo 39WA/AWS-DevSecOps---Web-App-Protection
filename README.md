@@ -1621,72 +1621,456 @@ The manually created runtime infrastructure will be destroyed after verification
 
 ---
 
-# Phase 4 - Terraform Infrastructure
+# Phase 4 - AWS Runtime Deployment with ECS Fargate
 
-The AWS environment is rebuilt using Terraform.
+Phase 4 deployed the containerised web application into an AWS runtime environment using Amazon ECS with the AWS Fargate launch type.
 
-## Terraform Resources
+The objective of this phase was to establish the AWS networking and runtime infrastructure required to host the application behind an internet-facing Application Load Balancer while maintaining a controlled network trust boundary between public ingress and the application container.
 
-Terraform manages:
+The container image published to Amazon Elastic Container Registry during Phase 3 was used as the application deployment artifact.
+
+AWS WAF is not enabled during this phase.
+
+## Phase 4 Objectives
+
+The objectives of Phase 4 were to:
+
+- Establish a dedicated AWS application network.
+- Deploy the application across multiple Availability Zones.
+- Configure public internet routing for the Application Load Balancer.
+- Create separate security boundaries for the load balancer and ECS workload.
+- Deploy an internet-facing Application Load Balancer.
+- Configure load balancer forwarding to application TCP port `8080`.
+- Configure application health monitoring using `/health`.
+- Deploy the Phase 3 container image using Amazon ECS and AWS Fargate.
+- Verify that the ECS service is active and stable.
+- Verify that the registered application target is healthy.
+- Validate the application through the public load balancer endpoint.
+- Prevent direct unrestricted public access to ECS application port `8080`.
+
+## AWS Runtime Architecture
+
+The Phase 4 application request flow is:
+
+```text
+Client
+  |
+  v
+Internet
+  |
+  v
+Application Load Balancer
+HTTP TCP 80
+  |
+  v
+ALB Target Group
+HTTP TCP 8080
+Health Check: /health
+  |
+  v
+ECS Fargate Service
+  |
+  v
+ECS Fargate Task
+  |
+  v
+Node.js / Express Web Application
+TCP 8080
+```
+
+The Application Load Balancer provides the public application entry point.
+
+The ECS Fargate task receives application traffic on TCP port `8080` through the controlled load balancer path.
+
+The ECS application port is not directly exposed to unrestricted public traffic.
+
+## AWS Runtime Resources
+
+Phase 4 established the following AWS runtime resources:
 
 ### Networking
 
-- VPC.
-- Public subnets.
-- Internet Gateway.
-- Route tables.
-- Route table associations.
+- Dedicated VPC using CIDR `10.40.0.0/16`.
+- Two public subnets.
+- Public subnets deployed across separate Availability Zones.
+- Internet Gateway attached to the application VPC.
+- Public route table.
+- Active `0.0.0.0/0` internet route.
+- Public route table associations for both application subnets.
+
+### Network Security
+
+- Application Load Balancer security group.
+- ECS Fargate task security group.
+- Public HTTP ingress to the Application Load Balancer on TCP port `80`.
+- Controlled ECS application ingress on TCP port `8080`.
+- ECS application port `8080` protected from unrestricted `0.0.0.0/0` ingress.
 
 ### Application Load Balancer
 
-- Application Load Balancer.
-- ALB Security Group.
-- HTTP listener.
-- HTTPS listener.
-- Target Group.
+- Internet-facing Application Load Balancer.
+- Application Load Balancer HTTP listener.
+- HTTP listener configured on TCP port `80`.
+- Application target group.
+- Target group protocol configured as HTTP.
+- Target group port configured as `8080`.
+- Target group target type configured as `ip`.
+- Target group health check path configured as `/health`.
 
-### ECS
+### Amazon ECS
 
-- ECS Cluster.
-- ECS Task Definition.
-- ECS Service.
-- IAM Task Execution Role.
-- CloudWatch Log Group.
+- Amazon ECS cluster.
+- ECS Fargate task definition.
+- ECS Fargate service.
+- Application container deployed from the Phase 3 Amazon ECR image.
+- ECS service configured with one desired application task.
+- ECS workload integrated with the Application Load Balancer target group.
 
-### DNS and TLS
+## Network Configuration
 
-- ACM Certificate.
-- ACM DNS validation.
-- Route 53 record.
+A dedicated VPC was configured for the Phase 4 AWS runtime environment.
 
-### CI/CD Authentication
+The VPC uses the following CIDR range:
 
-- GitHub IAM OIDC Provider.
-- GitHub Actions IAM Role.
-- IAM trust policy.
-- Least-privilege deployment policies.
-
-## Terraform Deployment
-
-```bash
-cd infra
-
-terraform init
-terraform fmt -check
-terraform validate
-terraform plan
-terraform apply
+```text
+10.40.0.0/16
 ```
 
-## Verify the Deployment
+Two public subnets were configured across separate Availability Zones:
 
-```bash
-terraform output
+| Availability Zone | Subnet CIDR | Public IP Mapping |
+| --- | --- | --- |
+| `eu-west-2a` | `10.40.1.0/24` | Enabled |
+| `eu-west-2b` | `10.40.2.0/24` | Enabled |
+
+Using separate Availability Zones establishes the network layout required for the Application Load Balancer.
+
+An Internet Gateway was attached to the VPC.
+
+The public route table contains an active internet route:
+
+```text
+0.0.0.0/0
 ```
 
-```bash
-curl https://security.example.com/health
+Both public subnets are associated with the public route table.
+
+## Phase 4 Network Security Evidence
+
+Phase 4 network verification was performed to validate the VPC, subnet, Internet Gateway, route, and subnet association configuration.
+
+The verification demonstrates:
+
+- The VPC uses CIDR `10.40.0.0/16`.
+- The VPC is available.
+- Two public subnets are configured.
+- The subnets are deployed in `eu-west-2a` and `eu-west-2b`.
+- Public IP mapping is enabled for the public subnets.
+- The Internet Gateway is attached.
+- The `0.0.0.0/0` public internet route is active.
+- The public route table is associated with both subnets.
+- The Phase 4 network security verification completed successfully.
+
+### Phase 4 Network Security Verification
+
+The following terminal evidence confirms the AWS network configuration used by the Phase 4 runtime environment.
+
+![Phase 4 Network Security Verification](docs/images/phase-4-network-security-verification.png)
+
+**Evidence file:** `docs/images/phase-4-network-security-verification.png`
+
+### Verified Network Controls
+
+| Network Check | Expected Result | Verified Result |
+| --- | --- | --- |
+| VPC CIDR | `10.40.0.0/16` | Passed |
+| VPC state | `available` | Passed |
+| Public subnet count | Two subnets | Passed |
+| Availability Zones | Separate Availability Zones | Passed |
+| Public IP mapping | Enabled | Passed |
+| Internet Gateway | Attached | Passed |
+| Public internet route | Active `0.0.0.0/0` route | Passed |
+| Route table associations | Both public subnets associated | Passed |
+
+## Network Security Model
+
+Phase 4 established a controlled network trust boundary between the public Application Load Balancer and the ECS Fargate workload.
+
+The public traffic path is:
+
+```text
+Internet
+  |
+  v
+Application Load Balancer Security Group
+TCP 80
+  |
+  v
+Application Load Balancer
+  |
+  v
+ECS Security Group Trust Boundary
+TCP 8080
+  |
+  v
+ECS Fargate Task
 ```
+
+The Application Load Balancer accepts public HTTP traffic on TCP port `80`.
+
+Application traffic is forwarded from the load balancer to the ECS workload on TCP port `8080`.
+
+The ECS security boundary permits the required application traffic through the controlled load balancer path.
+
+The ECS application port is not directly exposed to:
+
+```text
+0.0.0.0/0
+```
+
+This configuration reduces the externally exposed application surface and ensures that public requests are routed through the Application Load Balancer.
+
+## Application Load Balancer
+
+An internet-facing Application Load Balancer was configured as the public application entry point.
+
+The load balancer is configured with an HTTP listener:
+
+| Listener Configuration | Value |
+| --- | --- |
+| Protocol | HTTP |
+| Port | `80` |
+
+The HTTP listener forwards application traffic to the application target group.
+
+The target group is configured as follows:
+
+| Target Group Configuration | Value |
+| --- | --- |
+| Protocol | HTTP |
+| Port | `8080` |
+| Target type | `ip` |
+| Health check path | `/health` |
+
+The `ip` target type supports ECS Fargate tasks using the `awsvpc` network mode.
+
+## Application Health Monitoring
+
+The Application Load Balancer target group uses the application `/health` endpoint for runtime health verification.
+
+The application health endpoint returns:
+
+```json
+{"status":"ok"}
+```
+
+The target group periodically queries:
+
+```text
+/health
+```
+
+A successful health response allows the Application Load Balancer to identify the ECS task as a healthy application target.
+
+Phase 4 verification confirmed the registered ECS Fargate target state as:
+
+```text
+healthy
+```
+
+This confirms that:
+
+- The ECS task is running.
+- The application is listening on TCP port `8080`.
+- The Application Load Balancer can reach the ECS task.
+- The target group can query the `/health` endpoint.
+- The application returns the expected health response.
+
+## ECS Fargate Runtime
+
+The application is deployed using an Amazon ECS service with the AWS Fargate launch type.
+
+The ECS service maintains the requested application task count and integrates the running task with the Application Load Balancer target group.
+
+Phase 4 runtime verification confirmed:
+
+| ECS Service Check | Verified Result |
+| --- | --- |
+| Service | `aws-devsecops-service` |
+| Status | `ACTIVE` |
+| Launch type | `FARGATE` |
+| Desired tasks | `1` |
+| Running tasks | `1` |
+| Pending tasks | `0` |
+
+The ECS service was verified as stable.
+
+The service has one desired task and one running task with no pending tasks.
+
+The running application workload uses the container image published to Amazon ECR during Phase 3.
+
+## Public Application Verification
+
+Application functionality was verified through the public Application Load Balancer endpoint.
+
+### Health Endpoint
+
+The public `/health` endpoint returned:
+
+```json
+{"status":"ok"}
+```
+
+The response matched the expected application health response.
+
+### Login Endpoint
+
+The public `/login` endpoint returned:
+
+```text
+HTTP 200
+```
+
+The response confirms that the application login testing endpoint remains accessible through the deployed AWS runtime environment.
+
+These results confirm successful application traffic through the complete runtime path:
+
+```text
+Client
+  |
+  v
+Application Load Balancer
+  |
+  v
+Target Group
+  |
+  v
+ECS Fargate Task
+  |
+  v
+Node.js / Express Application
+```
+
+## ECS Runtime Trust Boundary
+
+The ECS application listens on TCP port `8080`.
+
+Phase 4 security verification confirmed that TCP port `8080` is not directly exposed to unrestricted public ingress from:
+
+```text
+0.0.0.0/0
+```
+
+The verified result was:
+
+```text
+PASS: ECS TCP 8080 is not publicly exposed
+```
+
+This establishes a network trust boundary between the public Application Load Balancer and the application container.
+
+Public application requests are routed through the load balancer rather than directly to the ECS workload.
+
+## Phase 4 Evidence
+
+Phase 4 security verification was performed against the deployed AWS runtime environment.
+
+The verification demonstrates:
+
+- The Application Load Balancer listener is configured for HTTP TCP port `80`.
+- The target group forwards HTTP traffic to TCP port `8080`.
+- The target group uses target type `ip`.
+- The target group health check path is `/health`.
+- The ECS service uses the AWS Fargate launch type.
+- The ECS service is `ACTIVE`.
+- The ECS service has one desired task.
+- The ECS service has one running task.
+- No ECS tasks are pending.
+- The Application Load Balancer target is healthy.
+- The public `/health` endpoint returns `{"status":"ok"}`.
+- The public `/login` endpoint returns HTTP `200`.
+- ECS TCP port `8080` is not directly exposed to `0.0.0.0/0`.
+- The Phase 4 AWS runtime deployment security verification completed successfully.
+
+### Phase 4 Security Outcome Verification
+
+The following terminal evidence confirms the Application Load Balancer listener, target group security configuration, ECS Fargate service state, target health, public application endpoint availability, and ECS runtime trust boundary.
+
+![Phase 4 Security Outcome Verification](docs/images/phase-4-security-outcome-verification.png)
+
+**Evidence file:** `docs/images/phase-4-security-outcome-verification.png`
+
+### Verified Security Controls
+
+| Security Check | Expected Result | Verified Result |
+| --- | --- | --- |
+| ALB listener | HTTP TCP port `80` | Passed |
+| Target group port | TCP port `8080` | Passed |
+| Target group protocol | HTTP | Passed |
+| Target type | `ip` | Passed |
+| Health check path | `/health` | Passed |
+| ECS launch type | Fargate | Passed |
+| ECS service status | `ACTIVE` | Passed |
+| Desired task count | `1` | Passed |
+| Running task count | `1` | Passed |
+| Pending task count | `0` | Passed |
+| ALB target health | `healthy` | Passed |
+| Public health endpoint | `{"status":"ok"}` | Passed |
+| Public login endpoint | HTTP `200` | Passed |
+| ECS TCP `8080` exposure | Not exposed to `0.0.0.0/0` | Passed |
+
+## Phase 4 Security Evidence Summary
+
+The Phase 4 evidence confirms that the application was successfully deployed into an AWS runtime environment using Amazon ECS and the AWS Fargate launch type.
+
+A dedicated VPC and two public subnets across separate Availability Zones provide the network foundation for the application runtime.
+
+An Internet Gateway and public route allow the internet-facing Application Load Balancer to receive public application requests.
+
+The Application Load Balancer provides the public application entry point on HTTP TCP port `80` and forwards application requests to the ECS Fargate workload on TCP port `8080`.
+
+The target group uses target type `ip` and the application `/health` endpoint for runtime health monitoring.
+
+The registered ECS target was verified as healthy, confirming successful communication between the Application Load Balancer and the running application task.
+
+The ECS service is active with one desired task, one running task, and no pending tasks, confirming that the requested application workload is operating successfully.
+
+Public endpoint verification confirms that `/health` returns the expected `{"status":"ok"}` response and `/login` remains accessible through the Application Load Balancer.
+
+The ECS application port `8080` is not directly exposed to unrestricted public traffic. Application access is therefore routed through the controlled Application Load Balancer path.
+
+Phase 4 establishes the AWS runtime deployment and network trust boundary required for the web application protection controls introduced in the following phase.
+
+---
+
+## Phase 4 Security Outcome
+
+Phase 4 established a functional AWS runtime deployment for the containerised web application.
+
+The application now:
+
+- Runs within a dedicated AWS VPC.
+- Uses two public subnets across separate Availability Zones.
+- Uses an attached Internet Gateway.
+- Uses an active public internet route.
+- Runs as an ECS Fargate workload.
+- Uses the container image published to Amazon ECR.
+- Runs as an active ECS service.
+- Maintains one desired and one running application task.
+- Has no pending application tasks.
+- Receives public application traffic through an internet-facing Application Load Balancer.
+- Uses an HTTP listener on TCP port `80`.
+- Receives load-balanced application traffic on TCP port `8080`.
+- Uses target type `ip`.
+- Uses `/health` for Application Load Balancer target health checks.
+- Registers as a healthy Application Load Balancer target.
+- Exposes the `/health` endpoint through the Application Load Balancer.
+- Exposes the `/login` endpoint through the Application Load Balancer.
+- Prevents direct unrestricted public access to ECS TCP port `8080`.
+- Establishes a controlled load balancer-to-container network trust boundary.
+
+The AWS runtime environment is now ready for the web application protection controls introduced in the next phase.
+
 
 ---
 
