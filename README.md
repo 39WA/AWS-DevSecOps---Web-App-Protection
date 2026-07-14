@@ -641,8 +641,6 @@ Phase 1 security verification confirms that the application is functioning as ex
 
 ---
 
-# Phase 2 - Secure Containerisation
----
 
 # Phase 2 - Secure Containerisation
 
@@ -865,41 +863,91 @@ Expected response:
 
 ---
 
-## Phase 2 Evidence
+## Phase 2 Security Outcome
 
-The following screenshot demonstrates:
-
-- Docker container running successfully.
-- Application image `aws-devsecops-webapp:phase2`.
-- Container runtime user verified as `node`.
-- `/health` endpoint returning `{"status":"ok"}`.
-- `/login` endpoint returning the expected application response.
-
-
-
----
-
-## Phase 2 Security Outcome 
-
-Phase 2 established a secure containerised runtime for the web application.
+Phase 2 established a secure containerised runtime for the web application and introduced container-level security controls before deployment to AWS.
 
 The application now:
 
 - Runs inside a lightweight Node.js Alpine container.
-- Installs production dependencies only.
-- Uses deterministic dependency installation.
-- Runs as a non-root user.
-- Excludes unnecessary and sensitive local files from the Docker build context.
-- Successfully exposes the `/health` and `/login` endpoints from the container.
+- Installs production dependencies only using `npm ci --omit=dev`.
+- Uses deterministic dependency installation based on the committed `package-lock.json`.
+- Runs as the non-root `node` user.
+- Executes at runtime with a non-root UID.
+- Excludes unnecessary and sensitive local files from the Docker build context using `.dockerignore`.
+- Exposes application port `8080`.
+- Successfully serves the `/health` and `/login` endpoints from the running container.
+- Does not expose the Express `X-Powered-By` response header.
+- Provides a secure container baseline for deployment to AWS infrastructure.
 
-The container is now ready for deployment behind an AWS Application Load Balancer using ECS Fargate in Phase 3.
+The container was successfully built, started, and security-validated locally before deployment to AWS.
 
----
+### Phase 2 Security Validation
 
-The following screenshot demonstrates the Docker container running successfully as the non-root `node` user and verifies the application health and login endpoints.
+Security verification was performed against the running Docker container to confirm both the container runtime configuration and application functionality after containerisation.
 
-![Phase 2 Secure Container Verification](docs/images/phase-2-secure-container-verification.png)
+The verification confirmed:
 
+- The Docker container is running successfully.
+- The application is running from the `aws-devsecops-webapp:phase2` image.
+- Container port `8080` is published to host port `8080`.
+- The container image is configured to run as the non-root `node` user.
+- The running application process executes with UID `1000`.
+- The runtime UID is not privileged root UID `0`.
+- The `/health` endpoint returns HTTP `200 OK` with `{"status":"ok"}`.
+- The `/login` endpoint returns HTTP `200 OK` with the expected application response.
+- The Express `X-Powered-By` response header is not exposed.
+- The Phase 2 secure containerisation verification completed successfully.
+
+### Verified Security Controls
+
+| Security Check | Expected Result | Verified Result |
+| --- | --- | --- |
+| Container status | Container running | Passed |
+| Container image | `aws-devsecops-webapp:phase2` | Passed |
+| Container port | Port `8080` published | Passed |
+| Configured container user | Non-root `node` user | Passed |
+| Runtime identity | UID must not be `0` | Passed — UID `1000` |
+| Health endpoint | HTTP `200 OK` | Passed |
+| Login endpoint | HTTP `200 OK` | Passed |
+| Express header disclosure | `X-Powered-By` header not exposed | Passed |
+
+### Phase 2 Security Outcome Evidence
+
+The following terminal evidence confirms the secure container runtime configuration and validates application functionality from the running Docker container.
+
+The evidence demonstrates:
+
+- The `aws-devsecops-webapp:phase2` container image is running successfully.
+- The container is configured to run as the non-root `node` user.
+- Runtime identity verification confirms UID `1000`.
+- The application process is not running as privileged root UID `0`.
+- The `/health` endpoint returns HTTP `200 OK`.
+- The `/login` endpoint returns HTTP `200 OK`.
+- The Express `X-Powered-By` response header is not exposed.
+- Phase 2 secure containerisation verification completed successfully.
+
+![Phase 2 Security Outcome Verification](docs/images/phase-2-security-outcome-verification.png)
+
+**Evidence file:** `docs/images/phase-2-security-outcome-verification.png`
+
+### Phase 2 Security Outcome Summary
+
+Phase 2 successfully containerised the Node.js and Express application and established a secure container runtime baseline.
+
+The Docker image uses a lightweight Node.js Alpine base image and installs production dependencies only using deterministic dependency installation.
+
+The container is explicitly configured to run as the non-root `node` user. Runtime identity verification confirms that the application process executes with UID `1000` rather than privileged root UID `0`.
+
+Running the application as a non-root user applies the principle of least privilege and reduces the potential impact of an application or container compromise.
+
+The `.dockerignore` configuration reduces the Docker build context and prevents unnecessary local development files, dependency directories, Terraform state files, and environment files from being copied into the image build context.
+
+Application health and login endpoints remain accessible through published port `8080`, confirming that the container security controls do not prevent the application from functioning as expected.
+
+The Express `X-Powered-By` response header also remains disabled, reducing unnecessary framework information disclosure.
+
+Phase 2 establishes the secure container baseline required for deployment behind an AWS Application Load Balancer using Amazon ECS on AWS Fargate in Phase 3.
 ---
 
 # Phase 3 - AWS ClickOps Deployment
