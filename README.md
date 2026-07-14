@@ -1621,7 +1621,7 @@ The manually created runtime infrastructure will be destroyed after verification
 
 ---
 
-# Phase 4 - Terraform Infrastructure
+### Phase 4 - Terraform Infrastructure
 
 The AWS environment is rebuilt using Terraform.
 
@@ -1666,7 +1666,7 @@ Terraform manages:
 - IAM trust policy.
 - Least-privilege deployment policies.
 
-## Terraform Deployment
+### Terraform Deployment
 
 ```bash
 cd infra
@@ -1678,7 +1678,7 @@ terraform plan
 terraform apply
 ```
 
-## Verify the Deployment
+### Verify the Deployment
 
 ```bash
 terraform output
