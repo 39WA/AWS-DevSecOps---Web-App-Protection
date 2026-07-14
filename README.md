@@ -2032,6 +2032,16 @@ HTTP/2 403
 
 ---
 
+### Phase 5 AWS WAF Security Outcome Verification
+
+The following terminal evidence confirms the AWS WAF Web ACL deployment, AWS managed protection rules, IP rate-based protection, Application Load Balancer association, legitimate application traffic handling, controlled known bad input blocking, and application health availability through AWS WAF.
+
+![Phase 5 AWS WAF Security Outcome Verification](docs/images/phase-5-waf-security-outcome-verification.png)
+
+**Evidence file:** `docs/images/phase-5-waf-security-outcome-verification.png`
+
+---
+
 # WAF Rule Evidence
 
 ## WAF Rule Hit
