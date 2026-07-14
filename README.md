@@ -169,19 +169,430 @@ aws-devsecops-webapp-protection/
 
 ## Overview
 
-Phase 1 establishes the local Node.js web application that will be protected and deployed throughout this AWS DevSecOps project.
+Phase 1 establishes the local web application that will be protected and deployed throughout the AWS DevSecOps Web App Protection project.
 
-The application is built with Node.js and Express and exposes health and login endpoints for security testing.
+The application is built using **Node.js and Express** and provides lightweight application and security testing endpoints.
+
+The application exposes a dedicated health endpoint for infrastructure health checks and a controlled login endpoint that will later be used to validate AWS WAF protections against malicious web requests.
+
+No real user accounts, credentials, or authentication data are stored or processed by the application.
+
+---
+
+## Phase 1 Objectives
+
+The objectives of Phase 1 are to:
+
+- Build a lightweight Node.js web application.
+- Expose a `/health` endpoint.
+- Expose a mock `/login` endpoint.
+- Accept mock JSON login requests.
+- Reject invalid login attempts.
+- Run the application locally on port `8080`.
+- Verify application behaviour before containerisation.
+- Provide predictable endpoints for later AWS WAF security testing.
+
+---
+
+## Application Technology
+
+The application uses:
+
+| Component | Technology |
+| --- | --- |
+| Runtime | Node.js |
+| Web Framework | Express |
+| Application Port | `8080` |
+| Request Format | JSON |
+| Health Endpoint | `/health` |
+| Security Test Endpoint | `/login` |
+
+The application dependencies are defined in:
+
+```text
+app/package.json
+```
+
+The Node.js application entry point is:
+
+```text
+app/src/server.js
+```
+
+---
+
+## Application Structure
+
+The Phase 1 application files are organised as follows:
+
+```text
+app/
+├── src/
+│   └── server.js
+├── package.json
+└── package-lock.json
+```
+
+The `package-lock.json` file provides deterministic dependency resolution and ensures consistent dependency versions across local development and automated builds.
+
+---
 
 ## Application Endpoints
 
-### Health Endpoint
+The application exposes the following HTTP endpoints:
 
-The following screenshot demonstrates successful local application verification, including the health endpoint, login endpoint, and invalid login security test.
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `GET` | `/` | Application status |
+| `GET` | `/health` | Application health check |
+| `GET` | `/login` | Login endpoint information |
+| `POST` | `/login` | Mock login request |
+
+These endpoints provide predictable application behaviour that can later be tested through the Application Load Balancer and AWS WAF.
+
+---
+
+## Root Endpoint
+
+The root application endpoint provides basic application status information.
+
+```text
+GET /
+```
+
+Example request:
+
+```bash
+curl http://localhost:8080/
+```
+
+Expected response:
+
+```json
+{
+  "application": "AWS DevSecOps Web App Protection",
+  "status": "running"
+}
+```
+
+---
+
+## Health Endpoint
+
+The application exposes a dedicated health endpoint.
+
+```text
+GET /health
+```
+
+The endpoint was tested using:
+
+```bash
+curl http://localhost:8080/health
+```
+
+Expected response:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+The `/health` endpoint provides a lightweight method of confirming that the application process is running and responding to HTTP requests.
+
+The endpoint will later be used by:
+
+- Docker container verification.
+- Application Load Balancer target group health checks.
+- Amazon ECS Fargate service validation.
+- CI/CD post-deployment application tests.
+
+---
+
+## Login Endpoint
+
+The application exposes a mock login endpoint.
+
+```text
+GET /login
+```
+
+The endpoint was tested using:
+
+```bash
+curl http://localhost:8080/login
+```
+
+Expected response:
+
+```json
+{
+  "message": "Login endpoint",
+  "method": "POST",
+  "requiredFields": [
+    "username",
+    "password"
+  ]
+}
+```
+
+The endpoint describes the expected request method and required fields for a mock login request.
+
+The login endpoint does not authenticate real users.
+
+It provides a controlled HTTP endpoint that will later be used to validate AWS WAF protections.
+
+---
+
+## Mock Login Request
+
+The application accepts mock login requests using:
+
+```text
+POST /login
+```
+
+A test login request was performed using:
+
+```bash
+curl -i \
+  -X POST \
+  http://localhost:8080/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"password"}'
+```
+
+Expected HTTP response:
+
+```text
+HTTP/1.1 401 Unauthorized
+```
+
+Expected response body:
+
+```json
+{
+  "status": "denied",
+  "message": "Invalid username or password"
+}
+```
+
+The application deliberately rejects invalid mock credentials.
+
+No real passwords, user accounts, authentication tokens, or identity information are stored by the application.
+
+---
+
+## Missing Login Fields
+
+The application validates that both `username` and `password` are included in a login request.
+
+Example request:
+
+```bash
+curl -i \
+  -X POST \
+  http://localhost:8080/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin"}'
+```
+
+Expected HTTP status:
+
+```text
+HTTP/1.1 400 Bad Request
+```
+
+Expected response:
+
+```json
+{
+  "status": "error",
+  "message": "Username and password are required"
+}
+```
+
+This provides basic request validation before later AWS WAF protections are introduced.
+
+---
+
+## Local Application Setup
+
+Application dependencies were installed from the `app` directory.
+
+```bash
+cd app
+npm install
+```
+
+The application was started using:
+
+```bash
+npm start
+```
+
+The Node.js start command executes:
+
+```text
+node src/server.js
+```
+
+Expected application output:
+
+```text
+Web application listening on port 8080
+```
+
+The application listens on:
+
+```text
+0.0.0.0:8080
+```
+
+Listening on `0.0.0.0` allows the application to accept network traffic when it is later executed inside a Docker container and Amazon ECS task.
+
+---
+
+## Local Application Verification
+
+The application was validated locally before containerisation.
+
+### Health Check Verification
+
+```bash
+curl http://localhost:8080/health
+```
+
+Expected:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+### Login Endpoint Verification
+
+```bash
+curl http://localhost:8080/login
+```
+
+Expected:
+
+```json
+{
+  "message": "Login endpoint",
+  "method": "POST",
+  "requiredFields": [
+    "username",
+    "password"
+  ]
+}
+```
+
+### Invalid Login Verification
+
+```bash
+curl -i \
+  -X POST \
+  http://localhost:8080/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"password"}'
+```
+
+Expected HTTP status:
+
+```text
+HTTP/1.1 401 Unauthorized
+```
+
+The following application behaviour was successfully verified:
+
+- The Node.js application starts successfully.
+- The application listens on port `8080`.
+- `/health` returns `{"status":"ok"}`.
+- `/login` returns the expected login endpoint information.
+- `POST /login` accepts JSON request bodies.
+- Invalid mock credentials return HTTP `401 Unauthorized`.
+- Missing login fields return HTTP `400 Bad Request`.
+- No real authentication credentials are stored or processed.
+
+---
+
+## Security Testing Target
+
+The `/login` endpoint is intentionally simple and predictable.
+
+It will later act as the application security testing target for AWS WAF.
+
+Example malicious request patterns that will be tested include:
+
+### SQL Injection
+
+```text
+/login?username=' OR 1=1 --
+```
+
+### Cross-Site Scripting
+
+```text
+/login?test=<script>alert(1)</script>
+```
+
+### Path Traversal and Known Bad Inputs
+
+```text
+/login?file=../../etc/passwd
+```
+
+### Excessive Requests
+
+Repeated requests to `/login` will be used to validate AWS WAF rate-based rules.
+
+These tests will only be performed against infrastructure owned and deployed as part of this project.
+
+---
+
+## Phase 1 Evidence
+
+The following screenshot demonstrates successful local application verification.
+
+The evidence includes:
+
+- The Node.js application running on port `8080`.
+- Successful `/health` endpoint verification.
+- Successful `/login` endpoint verification.
+- Invalid login credentials returning HTTP `401 Unauthorized`.
 
 ![Phase 1 Local Application Verification](docs/images/phase-1-local-verification.png)
 
+---
 
+## Phase 1 Security Outcome
+
+Phase 1 established the application foundation for the AWS DevSecOps Web App Protection project.
+
+The application now:
+
+- Runs as a lightweight Node.js and Express web service.
+- Listens on port `8080`.
+- Exposes a dedicated `/health` endpoint for infrastructure health checks.
+- Exposes a controlled `/login` endpoint for AWS WAF security testing.
+- Accepts JSON request bodies for mock login requests.
+- Validates required login request fields.
+- Rejects invalid mock login attempts with HTTP `401 Unauthorized`.
+- Does not store or process real authentication credentials.
+- Provides predictable endpoints for security validation.
+- Provides a controlled target for SQL injection, XSS, known bad input, and rate-limit testing.
+
+The application was successfully validated locally before containerisation.
+
+**Phase 1 is complete and the application is ready for secure containerisation in Phase 2.**
+
+---
+
+# Phase 2 - Secure Containerisation
 ---
 
 # Phase 2 - Secure Containerisation
@@ -415,7 +826,7 @@ The following screenshot demonstrates:
 - `/health` endpoint returning `{"status":"ok"}`.
 - `/login` endpoint returning the expected application response.
 
-![Phase 2 Secure Container Verification](docs/images/phase-2-secure-container-verification.png)
+
 
 ---
 
