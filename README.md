@@ -571,22 +571,71 @@ The evidence includes:
 
 ## Phase 1 Security Outcome
 
-Phase 1 established the application foundation for the AWS DevSecOps Web App Protection project.
+Phase 1 established the application foundation and a controlled security testing target for the AWS DevSecOps Web App Protection project.
 
 The application now:
 
 - Runs as a lightweight Node.js and Express web service.
 - Listens on port `8080`.
-- Exposes a dedicated `/health` endpoint for infrastructure health checks.
+- Exposes a dedicated `/health` endpoint for application and infrastructure health checks.
 - Exposes a controlled `/login` endpoint for AWS WAF security testing.
 - Accepts JSON request bodies for mock login requests.
 - Validates required login request fields.
 - Rejects invalid mock login attempts with HTTP `401 Unauthorized`.
+- Rejects incomplete login requests with HTTP `400 Bad Request`.
 - Does not store or process real authentication credentials.
-- Provides predictable endpoints for security validation.
-- Provides a controlled target for SQL injection, XSS, known bad input, and rate-limit testing.
+- Does not expose the Express `X-Powered-By` response header.
+- Provides predictable endpoints for repeatable security validation.
+- Provides a controlled target for SQL injection, XSS, known bad input, and rate-limit testing in later phases.
 
 The application was successfully validated locally before containerisation.
+
+### Phase 1 Security Validation
+
+A local security verification test was performed against the running application on port `8080`.
+
+The following controls and application behaviours were verified:
+
+| Security Check | Expected Result | Verified Result |
+| --- | --- | --- |
+| Health endpoint | HTTP `200 OK` | Passed |
+| Login endpoint availability | HTTP `200 OK` | Passed |
+| Invalid login attempt | HTTP `401 Unauthorized` | Passed |
+| Missing required password field | HTTP `400 Bad Request` | Passed |
+| Express header disclosure | `X-Powered-By` header not exposed | Passed |
+
+The invalid login test confirms that mock authentication failures are rejected with a controlled `401 Unauthorized` response.
+
+The missing-password test confirms that malformed or incomplete login requests are rejected with a `400 Bad Request` response before further processing.
+
+The Express header disclosure check confirms that the `X-Powered-By` response header is not exposed, reducing unnecessary framework information disclosure.
+
+These tests establish the expected baseline application behaviour before container security controls and AWS WAF protections are introduced.
+
+### Phase 1 Security Outcome Evidence
+
+The following terminal evidence demonstrates the completed Phase 1 security verification.
+
+The evidence confirms:
+
+- The `/health` endpoint returns HTTP `200 OK`.
+- The `/login` endpoint is available and returns HTTP `200 OK`.
+- Invalid login attempts return HTTP `401 Unauthorized`.
+- Requests with a missing password return HTTP `400 Bad Request`.
+- The Express `X-Powered-By` response header is not exposed.
+- The Phase 1 security verification completed successfully.
+
+![Phase 1 Security Outcome Verification](docs/images/phase-1-security-outcome-verification.png)
+
+**Evidence file:** `docs/images/phase-1-security-outcome-verification.png`
+
+### Phase 1 Security Outcome Summary
+
+Phase 1 delivered a locally validated Node.js and Express application with predictable endpoints and controlled error handling suitable for DevSecOps security testing.
+
+The application provides a repeatable baseline for later security phases, including container hardening, AWS infrastructure deployment, AWS WAF managed rule validation, SQL injection testing, cross-site scripting testing, known bad input testing, and rate-based protection.
+
+Phase 1 security verification confirms that the application is functioning as expected and is ready for secure containerisation in Phase 2.
 
 **Phase 1 is complete and the application is ready for secure containerisation in Phase 2.**
 
