@@ -2027,7 +2027,7 @@ The application now:
 
 The AWS runtime environment is now ready for the web application protection controls introduced in the next phase.
 
----
+
 ---
 
 # Phase 5 - AWS WAF Protection
