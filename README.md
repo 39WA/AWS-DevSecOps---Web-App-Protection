@@ -951,66 +951,381 @@ Phase 2 establishes the secure container baseline required for deployment behind
 
 ---
 
-# Phase 3 - AWS ClickOps Deployment
+# Phase 3 - Secure Container Registry with Amazon ECR
 
-The first AWS deployment is completed manually.
+Phase 3 establishes a secured container image registry using Amazon Elastic Container Registry (Amazon ECR).
 
-The objective is to understand the AWS resources and their relationships before automating the infrastructure.
+The objective of this phase is to create a controlled AWS container image publication workflow before deploying the application to Amazon ECS and AWS Fargate.
 
-## AWS Resources
+The secure container image produced during Phase 2 is authenticated, tagged, published, scanned, and verified in Amazon ECR.
 
-Create the following resources manually:
+AWS runtime infrastructure such as the Application Load Balancer, ECS Fargate service, Route 53 DNS, TLS certificate, and AWS WAF protection will be introduced in later phases.
 
-- VPC.
+---
+
+## Phase 3 Objectives
+
+The objectives of Phase 3 are to:
+
+- Verify the authenticated AWS CLI identity.
+- Confirm the target AWS deployment region.
+- Create a dedicated Amazon ECR repository.
+- Enable automatic container image scanning on push.
+- Enforce immutable container image tags.
+- Authenticate Docker with Amazon ECR.
+- Preserve the secure Phase 2 container image for AWS publication.
+- Tag the secure container image using the Amazon ECR repository URI.
+- Push the container image to Amazon ECR.
+- Verify the published image tag and SHA-256 digest.
+- Confirm completion of the Amazon ECR image scan.
+- Establish a controlled container image source for later AWS deployment phases.
+
+---
+
+## AWS Environment Verification
+
+Before creating the Amazon ECR repository, the authenticated AWS CLI identity and target AWS region were verified.
+
+The deployment uses the AWS region:
+
+```text
+eu-west-2
+```
+
+AWS CLI authentication was verified using AWS Security Token Service.
+
+The AWS account ID was retrieved dynamically rather than hard-coded into the project source.
+
+The account ID was loaded into an environment variable and used to construct the Amazon ECR registry URI.
+
+The ECR image URI follows the structure:
+
+```text
+<AWS_ACCOUNT_ID>.dkr.ecr.eu-west-2.amazonaws.com/aws-devsecops-webapp
+```
+
+This approach avoids storing the AWS account ID directly in the application source code and allows registry commands to use the authenticated AWS environment.
+
+---
+
+## Amazon ECR Repository
+
+A dedicated Amazon ECR repository was created for the application:
+
+```text
+aws-devsecops-webapp
+```
+
+The repository stores the secured container image that will be used during later Amazon ECS and AWS Fargate deployment phases.
+
+The repository was configured with security controls at creation time.
+
+The verified repository configuration includes:
+
+```text
+Repository: aws-devsecops-webapp
+ScanOnPush: True
+TagMutability: IMMUTABLE
+```
+
+---
+
+## ECR Image Scanning
+
+Automatic container image scanning was enabled for the Amazon ECR repository.
+
+The repository configuration verifies:
+
+```text
+ScanOnPush = True
+```
+
+This causes Amazon ECR to initiate image scanning when a container image is pushed to the repository.
+
+The image scan introduces container vulnerability assessment into the image publication workflow.
+
+Image scan completion is verified after the container image is uploaded.
+
+---
+
+## Immutable Image Tags
+
+Amazon ECR image tag immutability was enabled.
+
+The repository configuration verifies:
+
+```text
+TagMutability = IMMUTABLE
+```
+
+Immutable image tags prevent an existing image tag from being overwritten by a different container image.
+
+This reduces the risk of silently replacing a previously published deployment artifact while continuing to reference the same image tag.
+
+The Phase 3 container image is published using the tag:
+
+```text
+phase3
+```
+
+Once the `phase3` tag is published, it cannot be reassigned to a different image while repository tag immutability remains enabled.
+
+---
+
+## Docker Authentication with Amazon ECR
+
+Docker was authenticated with the Amazon ECR registry using an AWS-generated login password.
+
+The authentication process used:
+
+```bash
+AWS_PAGER="" aws ecr get-login-password \
+  --region "$AWS_REGION" \
+| docker login \
+  --username AWS \
+  --password-stdin \
+  "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
+```
+
+Successful Docker authentication returned:
+
+```text
+Login Succeeded
+```
+
+The Amazon ECR authentication password is passed to Docker through standard input.
+
+Registry credentials are not hard-coded into the project source code.
+
+---
+
+## Container Image Tagging
+
+The secure container image produced during Phase 2 was tagged for publication to Amazon ECR.
+
+The verified Phase 2 image:
+
+```text
+aws-devsecops-webapp:phase2
+```
+
+was tagged using the Amazon ECR repository URI and the Phase 3 image tag.
+
+The tagging operation used:
+
+```bash
+docker tag \
+  aws-devsecops-webapp:phase2 \
+  "$ECR_IMAGE_URI:phase3"
+```
+
+Local Docker image verification confirmed that the Phase 2 image and the ECR-tagged Phase 3 image referenced the same local image ID:
+
+```text
+327e36a754cd
+```
+
+This verifies image continuity between the secure containerisation phase and the Amazon ECR publication phase.
+
+The container image verified during Phase 2 is therefore the same local image prepared for publication to Amazon ECR.
+
+---
+
+## Container Image Push
+
+The Phase 3 image was pushed to Amazon ECR using:
+
+```bash
+docker push "$ECR_IMAGE_URI:phase3"
+```
+
+The Docker client successfully uploaded the required image layers to the Amazon ECR repository.
+
+The completed push returned a SHA-256 image digest.
+
+The Phase 3 container image is therefore stored in Amazon ECR as a content-addressed container artifact.
+
+---
+
+## ECR Image Verification
+
+The published container image was verified directly using the AWS CLI.
+
+The verification confirmed:
+
+- The `phase3` image tag exists in Amazon ECR.
+- The image is stored in the `aws-devsecops-webapp` repository.
+- Amazon ECR recorded the image push timestamp.
+- The published image has an associated SHA-256 digest.
+
+The verified image tag is:
+
+```text
+phase3
+```
+
+The verified image digest is:
+
+```text
+sha256:0400c7065b02817c10d51f4bd7f57bc1938a0f28d0a4e9c4e8851416af497821
+```
+
+The SHA-256 digest provides a content-addressable identifier for the specific container image stored in Amazon ECR.
+
+Unlike a human-readable image tag, the image digest identifies the published image content.
+
+---
+
+## ECR Image Scan Verification
+
+The Amazon ECR image scan status was verified after the Phase 3 image was published.
+
+The AWS CLI returned:
+
+```text
+ScanStatus = COMPLETE
+```
+
+This confirms that the configured Amazon ECR image scanning process completed for the published Phase 3 container image.
+
+The `COMPLETE` status confirms completion of the image scanning process.
+
+A completed scan does not independently indicate that the image contains zero vulnerability findings. Vulnerability severity counts and individual findings must be reviewed separately when assessing container image risk.
+
+---
+
+## Phase 3 Evidence
+
+Phase 3 security verification was performed directly against the Amazon ECR repository and the published Phase 3 container image.
+
+The verification demonstrates:
+
+- The Amazon ECR repository exists.
+- The repository is named `aws-devsecops-webapp`.
+- Automatic image scanning on push is enabled.
+- Image tag immutability is enabled.
+- The secure Phase 2 container image was tagged for Amazon ECR publication.
+- Local image identity was preserved during ECR tagging.
+- Docker successfully authenticated with Amazon ECR.
+- The `phase3` container image was successfully pushed to the repository.
+- The published image has an AWS-recorded SHA-256 digest.
+- The `phase3` image tag exists in Amazon ECR.
+- The Amazon ECR image scan completed successfully.
+
+### Phase 3 ECR Security Outcome Verification
+
+The following terminal evidence confirms the Amazon ECR repository security configuration, published image identity, SHA-256 image digest, and image scan status.
+
+![Phase 3 ECR Security Outcome Verification](docs/images/phase-3-ecr-security-outcome-verification.png)
+
+**Evidence file:** `docs/images/phase-3-ecr-security-outcome-verification.png`
+
+---
+
+### Verified Security Controls
+
+| Security Check | Expected Result | Verified Result |
+| --- | --- | --- |
+| AWS region | `eu-west-2` | Passed |
+| ECR repository | `aws-devsecops-webapp` exists | Passed |
+| Image scan configuration | Scan on push enabled | Passed — `True` |
+| Image tag mutability | Immutable tags enabled | Passed — `IMMUTABLE` |
+| Docker ECR authentication | Authentication successful | Passed |
+| Image continuity | Phase 2 and ECR-tagged image use the same local image ID | Passed — `327e36a754cd` |
+| ECR image tag | `phase3` exists | Passed |
+| ECR image digest | SHA-256 digest assigned | Passed |
+| Image push | Container image stored in ECR | Passed |
+| ECR image scan | Scan process completed | Passed — `COMPLETE` |
+
+---
+
+### Phase 3 Security Evidence Summary
+
+The Phase 3 evidence confirms that a controlled Amazon ECR container registry was successfully established for the AWS DevSecOps Web App Protection project.
+
+The Amazon ECR repository is configured to automatically initiate image scanning when container images are pushed.
+
+Image tag immutability is enabled, preventing an existing image tag from being silently reassigned to a different container image.
+
+The secure container image created and verified during Phase 2 was tagged for Amazon ECR publication.
+
+Local Docker image verification confirmed that the Phase 2 image and the ECR-tagged Phase 3 image referenced the same image ID:
+
+```text
+327e36a754cd
+```
+
+This provides evidence of container image continuity between secure containerisation and registry publication.
+
+Docker successfully authenticated with the Amazon ECR registry using an AWS-generated authentication password.
+
+The Phase 3 container image was pushed to the `aws-devsecops-webapp` repository and verified directly through the AWS CLI.
+
+Amazon ECR recorded the following SHA-256 digest for the published image:
+
+```text
+sha256:0400c7065b02817c10d51f4bd7f57bc1938a0f28d0a4e9c4e8851416af497821
+```
+
+The image digest provides a content-addressable identifier for the specific container artifact stored in the registry.
+
+The Amazon ECR image scan reached the `COMPLETE` state, confirming that the configured image scanning process completed against the published Phase 3 image.
+
+Phase 3 therefore establishes a secured and verifiable container image source for the AWS runtime deployment phases.
+
+---
+
+## Phase 3 Security Outcome
+
+Phase 3 established a secured Amazon ECR container image registry for the web application.
+
+The application container image now:
+
+- Is stored in a dedicated Amazon ECR repository.
+- Is published from the secure Phase 2 container image.
+- Preserves image identity between local container verification and registry publication.
+- Uses an immutable image tag.
+- Is identified by a SHA-256 image digest.
+- Is automatically submitted to Amazon ECR image scanning on push.
+- Has completed the configured Amazon ECR image scanning process.
+- Is available as a controlled container image source for later AWS deployment phases.
+
+The Amazon ECR repository now provides a controlled boundary between local container development and AWS runtime deployment.
+
+Container image tag immutability reduces the risk of deployment artifact replacement.
+
+SHA-256 image digest verification provides a specific content-addressable identifier for the published container image.
+
+Automatic image scanning introduces container vulnerability assessment into the image publication workflow.
+
+The Phase 3 container artifact is now ready to be used as the deployment image for Amazon ECS and AWS Fargate in the next phase.
+
+---
+
+## Next Phase
+
+The next phase will deploy the verified Amazon ECR container image into the AWS runtime environment.
+
+The deployment architecture will introduce the required AWS networking and application delivery resources, including:
+
+- Amazon VPC.
 - Public subnets.
 - Internet Gateway.
 - Route tables.
+- Security Groups.
 - Application Load Balancer.
 - ALB Target Group.
-- ECS Cluster.
-- ECS Fargate Task Definition.
-- ECS Fargate Service.
-- Security Groups.
-- Amazon ECR repository.
-- Route 53 DNS record.
+- Amazon ECS Cluster.
+- AWS Fargate Task Definition.
+- AWS Fargate Service.
+- Route 53 DNS.
 - ACM TLS certificate.
 
-AWS WAF is **not enabled during this phase**.
+AWS WAF protection will be introduced after the application runtime and Application Load Balancer deployment have been verified.
 
-## Application Request Flow
+The verified Phase 3 Amazon ECR image will be used as the controlled container artifact for the deployment.
 
-```text
-Client
-  |
-  v
-Route 53
-  |
-  v
-Application Load Balancer
-  |
-  v
-Target Group
-  |
-  v
-ECS Fargate Task
-  |
-  v
-Web Application
-```
-
-## Verification
-
-```bash
-curl https://security.example.com/health
-```
-
-Expected response:
-
-```json
-{"status":"ok"}
-```
-
-After verification, manually destroy all AWS resources.
+---
 
 ---
 
