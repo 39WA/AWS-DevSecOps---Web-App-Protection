@@ -1622,77 +1622,9 @@ The manually created runtime infrastructure will be destroyed after verification
 
 ---
 
-# Phase 4 - Terraform Infrastructure
-
-The AWS environment is rebuilt using Terraform.
-
-## Terraform Resources
-
-Terraform manages:
-
-### Networking
-
-- VPC.
-- Public subnets.
-- Internet Gateway.
-- Route tables.
-- Route table associations.
-
-### Application Load Balancer
-
-- Application Load Balancer.
-- ALB Security Group.
-- HTTP listener.
-- HTTPS listener.
-- Target Group.
-
-### ECS
-
-- ECS Cluster.
-- ECS Task Definition.
-- ECS Service.
-- IAM Task Execution Role.
-- CloudWatch Log Group.
-
-### DNS and TLS
-
-- ACM Certificate.
-- ACM DNS validation.
-- Route 53 record.
-
-### CI/CD Authentication
-
-- GitHub IAM OIDC Provider.
-- GitHub Actions IAM Role.
-- IAM trust policy.
-- Least-privilege deployment policies.
-
-### Terraform Deployment
-
-```bash
-cd infra
-
-terraform init
-terraform fmt -check
-terraform validate
-terraform plan
-terraform apply
-```
-
-### Verify the Deployment
-
-```bash
-terraform output
-```
-
-```bash
-curl https://security.example.com/health
-```
 
 
----
-
-# Phase 4A - AWS Runtime Deployment with ECS Fargate
+# Phase 4 - AWS Runtime Deployment with ECS Fargate
 
 The containerised web application is deployed into an AWS runtime environment using Amazon ECS with the AWS Fargate launch type.
 
