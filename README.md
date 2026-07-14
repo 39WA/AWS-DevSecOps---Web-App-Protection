@@ -1381,10 +1381,15 @@ AWS_PAGER="" aws ecr describe-image-scan-findings \
   --no-cli-pager
 ```
 
-The verified scan status is:
+
+with:
+
+````markdown
+The verified scan output is:
 
 ```text
-ScanStatus = COMPLETE
+Critical   High   Low   Medium   ScanStatus
+None       None   None  None     COMPLETE
 ```
 
 This confirms that the configured Amazon ECR image scanning process completed for the published Phase 3 image.
