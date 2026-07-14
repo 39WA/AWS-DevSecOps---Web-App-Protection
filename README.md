@@ -1384,13 +1384,14 @@ AWS_PAGER="" aws ecr describe-image-scan-findings \
 
 with:
 
-````bash
+```bash
 The verified scan output is:
 
 ```text
 Critical   High   Low   Medium   ScanStatus
 None       None   None  None     COMPLETE
 ```
+
 
 This confirms that the configured Amazon ECR image scanning process completed for the published Phase 3 image.
 
