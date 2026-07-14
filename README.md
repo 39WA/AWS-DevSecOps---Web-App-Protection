@@ -948,6 +948,7 @@ Application health and login endpoints remain accessible through published port 
 The Express `X-Powered-By` response header also remains disabled, reducing unnecessary framework information disclosure.
 
 Phase 2 establishes the secure container baseline required for deployment behind an AWS Application Load Balancer using Amazon ECS on AWS Fargate in Phase 3.
+
 ---
 
 # Phase 3 - AWS ClickOps Deployment
