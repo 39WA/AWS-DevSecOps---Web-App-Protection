@@ -2132,6 +2132,30 @@ CountedRequests
 
 Metrics can be reviewed for the Web ACL and individual rules.
 
+The Phase 6 verification confirmed the following observed AWS WAF CloudWatch metric values:
+
+| Metric | Observed Sum |
+| --- | ---: |
+| `AllowedRequests` | `27.0` |
+| `BlockedRequests` | `7.0` |
+| `CountedRequests` | `0` |
+
+The `AllowedRequests` metric confirms that legitimate application traffic continued to reach the protected application.
+
+The `BlockedRequests` metric confirms that AWS WAF recorded requests terminated by the configured protection rules.
+
+The `CountedRequests` metric was available for monitoring and reported zero counted requests during the verification period.
+
+### AWS WAF CloudWatch Metrics Verification
+
+The following terminal evidence confirms the discovery and review of AWS WAF CloudWatch metrics for allowed, blocked, and counted requests.
+
+![Phase 6 AWS WAF CloudWatch Metrics Verification](docs/images/phase-6-waf-cloudwatch-metrics-verification.png)
+
+
+
+
+
 ---
 
 ## AWS Shield
