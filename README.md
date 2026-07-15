@@ -2077,9 +2077,7 @@ Captured information includes:
 
 ## WAF Log Evidence
 
-![AWS WAF logs](docs/images/waf-logs.png)
 
-Sensitive fields should be redacted where appropriate.
 
 ### AWS WAF CloudWatch Logging Configuration
 
