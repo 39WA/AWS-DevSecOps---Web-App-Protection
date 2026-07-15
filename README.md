@@ -2087,8 +2087,6 @@ The log group uses a seven-day retention period.
 
 ![Phase 6 AWS WAF CloudWatch Logging Configuration](docs/images/phase-6-waf-cloudwatch-logging.png)
 
-**Evidence file:** `docs/images/phase-6-waf-cloudwatch-logging.png`
-
 
 ---
 
