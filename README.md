@@ -2052,7 +2052,7 @@ The screenshot demonstrates an AWS WAF rule matching a malicious request.
 
 ## Blocked Request
 
-![AWS WAF blocked request](docs/images/waf-blocked-request.png)
+![AWS WAF blocked request](docs/images/phase-5-waf-blocked-request.png)
 
 The blocked request should display the matching rule and terminating `BLOCK` action.
 
