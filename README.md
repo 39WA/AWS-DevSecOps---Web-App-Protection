@@ -2038,7 +2038,7 @@ The following terminal evidence confirms the AWS WAF Web ACL deployment, AWS man
 
 ![Phase 5 AWS WAF Security Outcome Verification](docs/images/phase-5-waf-security-outcome-verification.png)
 
-**Evidence file:** `docs/images/phase-5-waf-security-outcome-verification.png`
+
 
 ---
 
@@ -2088,6 +2088,8 @@ The log group uses a seven-day retention period.
 ![Phase 6 AWS WAF CloudWatch Logging Configuration](docs/images/phase-6-waf-cloudwatch-logging.png)
 
 
+
+
 ---
 
 ## ALB Access Logs
@@ -2114,7 +2116,7 @@ The access log bucket uses Amazon S3 Block Public Access controls and AES-256 se
 
 ![Phase 6 Application Load Balancer Access Logging](docs/images/phase-6-alb-access-logging.png)
 
-**Evidence file:** `docs/images/phase-6-alb-access-logging.png`
+
 
 ---
 
