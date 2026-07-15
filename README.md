@@ -2046,7 +2046,7 @@ The following terminal evidence confirms the AWS WAF Web ACL deployment, AWS man
 
 ## WAF Rule Hit
 
-![AWS WAF rule hit](docs/images/waf-rule-hit.png)
+![AWS WAF rule hit](docs/images/phase-5-waf-rule-hit.png)
 
 The screenshot demonstrates an AWS WAF rule matching a malicious request.
 
