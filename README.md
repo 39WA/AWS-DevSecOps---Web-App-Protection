@@ -2081,6 +2081,16 @@ Captured information includes:
 
 Sensitive fields should be redacted where appropriate.
 
+### AWS WAF CloudWatch Logging Configuration
+
+AWS WAF logging is configured to deliver web request telemetry to a dedicated Amazon CloudWatch Logs log group.
+
+The log group uses a seven-day retention period.
+
+![Phase 6 AWS WAF CloudWatch Logging Configuration](docs/images/phase-6-waf-cloudwatch-logging.png)
+
+**Evidence file:** `docs/images/phase-6-waf-cloudwatch-logging.png`
+
 ---
 
 ## ALB Access Logs
