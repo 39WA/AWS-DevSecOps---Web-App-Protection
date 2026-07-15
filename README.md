@@ -2089,6 +2089,15 @@ The log group uses a seven-day retention period.
 
 **Evidence file:** `docs/images/phase-6-waf-cloudwatch-logging.png`
 
+### Application Load Balancer Access Logging
+
+Application Load Balancer access logging is enabled and configured to deliver request telemetry to a dedicated Amazon S3 bucket.
+
+The access log bucket uses Amazon S3 Block Public Access controls and AES-256 server-side encryption.
+
+![Phase 6 Application Load Balancer Access Logging](docs/images/phase-6-alb-access-logging.png)
+
+**Evidence file:** `docs/images/phase-6-alb-access-logging.png`
 ---
 
 ## ALB Access Logs
